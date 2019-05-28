@@ -1,0 +1,336 @@
+from copy import deepcopy
+import string
+import itertools
+
+
+def count_alphabet(text):
+    counter = 0
+    for char in text:
+        if char in string.ascii_letters:
+            counter += 1
+    return counter
+
+def get_alphabets(text):
+    chars = []
+    for char in text:
+        if char in string.ascii_letters:
+            chars.append(char)
+    return chars
+
+
+def make_query(qnodes, state):
+    q = ''
+    for i in range(len(qnodes)):
+        q += qnodes[i] + state[i] + ' '
+    q = q[:-1]
+    q = ' '.join(sorted(q.split()))
+    # print(q)
+    return q
+
+    # for i in range(2 ** (len(cpt.nodes) - 1)):
+    # state = "{0:b}".format(i).zfill(count_alphabet(new_factor))
+    # for i in cpt.nodes:
+    #     state =
+    return new_cpt
+
+
+class node:
+    def __init__(self, states):
+        self.states = states
+        self.father = ''
+        self.CPT = None
+
+    def set_father(self, father):
+        # fathers = [father]
+        # if ',' in father:
+        #     fathers = father.split(',')
+        # for father in fathers:
+        self.father = father
+
+    def set_CPT(self, cpt):
+        self.CPT = cpt
+
+    def __str__(self):
+        return self.CPT.__str__() + '\n' + 'father: ' + self.father
+
+
+class CPT:
+    def __init__(self, factor):
+        self.factor = factor
+        self.table = dict()
+        self.nodes = get_alphabets(factor)
+
+    def init_CP(self, vars, prob):
+        key = ''
+        for i in range(count_alphabet(self.factor)):
+            key += self.nodes[i] + vars[i] + ' '
+        self.table[key] = prob
+
+    def add_cp(self, var, prob):
+        self.table[var] = prob
+
+    def __str__(self):
+        # print('---------------------------')
+        # print('factor : ' + self.factor + '   probability')
+        out_str = ''
+        for var in self.table.keys():
+            out_str += var + " " + str(self.table[var]) + "\n"
+        return out_str
+
+nodes = dict()
+CPTs = list()
+
+
+def possib_states(vars):
+    possib_values = []
+    for var in vars:
+        possib_values.append(nodes[var])
+    possib_values = ['A0', 'A1'], ['B0', 'B1']
+    return [elem for elem in itertools.product(value for value in possib_values)]
+
+
+def get_cpt(factor) -> CPT:
+    for cpt in CPTs:
+        if cpt.factor == factor:
+            return cpt
+
+
+def sumout(factor, variable):
+    # print('summing out ' + factor + ' ' + 'on ' + variable)
+    cpt = get_cpt(factor)  # print(cpt)
+    # print('finding cpt for ' + factor)
+    new_factor = list(set(cpt.nodes) - set(variable))
+    new_cpt = CPT(','.join(sorted(new_factor)))
+    d=0
+    if len(get_alphabets(new_cpt.factor))==1:
+        d=1
+    # print(cpt)
+    # print(cpt.table.keys())
+    for joint1 in cpt.table.keys():
+        if joint1 not in new_cpt.table.keys():
+            rindex = joint1.index(variable)
+            joint1 = joint1[:rindex-d] + joint1[rindex + 3:]
+            # print('j1:',joint1)
+            new_prob = 0
+            for joint2 in cpt.table.keys():
+                # print('j2:',joint2)
+                if set(joint1.split()).intersection(joint2.split()) == set(joint1.split()):
+                    # print('hhhhh')
+                    # print(joint2)
+                    new_prob += cpt.table[joint2]
+                    # print(new_prob)
+            new_cpt.add_cp(joint1, new_prob)
+            # print(joint1, str(new_prob) ,'added to cpt')
+    CPTs.append(new_cpt)
+    return new_cpt
+
+
+def normalize(factor):
+    # print('normalizing on:',factor)
+    cpt = get_cpt(factor)
+    total = sum(cpt.table.values())
+    for joint in cpt.table.keys():
+        cpt.table[joint] = cpt.table[joint] / total
+    # print(cpt)
+    return cpt
+
+
+def restrict(factor, variable, value):
+    res_state = variable + value
+    cpt = get_cpt(factor)
+    new_cpt = CPT(factor)
+    for joint in cpt.table.keys():
+        if res_state in joint:
+            new_cpt.add_cp(joint, cpt.table[joint])
+    cpt.table = new_cpt.table
+
+
+def multiply(factor1, factor2):
+    # print('multipling', factor1, factor2)
+    if '|' not in factor2 and '|' in factor1:
+        temp = factor2
+        factor2 = factor1
+        factor1 = temp
+
+    cpt1 = get_cpt(factor1)
+    cpt2 = get_cpt(factor2)
+
+    # print('cpt1')
+    # print(cpt1)
+    # print('cpt2')
+    # print(cpt2)
+
+    new_factor = ','.join(sorted(set(get_alphabets(factor1)).union(get_alphabets(factor2))))
+    new_cpt = CPT(new_factor)
+
+    join_vars = list(set(get_alphabets(factor2)).intersection(get_alphabets(factor1)))
+    #  if set(join_vars).intersection(get_alphabets())
+    for joint2 in cpt2.table.keys():
+        common_state = ''
+        for var in joint2.split():
+            var_name = ''.join(sorted(filter(str.isalpha, var)))
+            if var_name in join_vars:
+                common_state += var + ' '
+        # print(common_state)
+        # restricted_cpt = restrict(cpt1.factor,common_state,)
+        for joint1 in cpt1.table.keys():
+            if set(common_state.split()).intersection(joint1.split()) == set(common_state.split()):
+                # print('found')
+                new_prob = cpt1.table[joint1] * cpt2.table[joint2]
+                new_joint = ' '.join(sorted(set(joint2.split()).union(joint1.split())))
+                new_cpt.add_cp(new_joint, new_prob)
+
+    return new_cpt
+
+def infrence(query, evidence):
+    query_factors = []
+    if '|' in query:
+            factor = ','.join(get_alphabets(query))
+            final_cpt = infrence(factor,evidence)
+            # print(final_cpt)
+            final_cpt = normalize(final_cpt.factor)
+            return final_cpt
+    else:
+            for node in nodes.keys():
+                if nodes[node].father != '':
+                    query_factors.append(str(node + '|' + nodes[node].father))
+                else:
+                    query_factors.append(str(node))
+
+            hidden_vars = sorted(set(nodes.keys()) - set(get_alphabets(query)))
+
+            # print(hidden_vars)
+            for ev in evidence.split():
+                for cpt in CPTs:
+                    if ev[0] in cpt.factor:
+                        restrict(cpt.factor,ev[0],ev[1:])
+                        # print('rested for ' ,ev)
+                        # print(cpt)
+            delete = []
+            for hv in hidden_vars:
+                has_intersection  = []
+                # print('hidden var:')
+                # print(hv)
+                for cpt in CPTs:
+                    # print('cpt:')
+                    # print(cpt)
+                    # print(cpt.nodes)
+                    if hv in cpt.nodes:
+                        # print('found intesrect')
+                        has_intersection.append(cpt.factor)
+                while len(has_intersection) > 1:
+                    new_cpt = multiply(has_intersection[-1],has_intersection[-2])
+                    CPTs.remove(get_cpt(has_intersection[-1]))
+                    CPTs.remove(get_cpt(has_intersection[-2]))
+                    # print(has_intersection)
+                    # print('new_cpt')
+                    # print(new_cpt.factor)
+                    # print(new_cpt)
+                    has_intersection = has_intersection[:-2]
+                    has_intersection.append(new_cpt.factor)
+                    # print('has intersecton')
+                    # print(has_intersection)
+                    CPTs.append(new_cpt)
+                # print('ended')
+                final_cpt = get_cpt(has_intersection[0])
+                # print(final_cpt)
+                for hv in hidden_vars:
+                    final_cpt.factor = ','.join(sorted(get_alphabets(final_cpt.factor)))
+                    if hv in final_cpt.factor:
+                        final_cpt = sumout(final_cpt.factor,hv)
+                        # CPTs.append(final_cpt)
+                        # print('after sumout' , hv)
+                        # print(final_cpt)
+                        delete.append(get_cpt(final_cpt.factor))
+                break
+            if not hidden_vars:
+                has_intersection = []
+                for query_factor1 in  query_factors:
+                    for query_factor2 in query_factors:
+                        if set(get_alphabets(query_factor1)).intersection(get_alphabets(query_factor2)) and query_factor2!=query_factor1 and query_factor1 not in has_intersection and query_factor2 not in has_intersection:
+                            has_intersection.append(query_factor1)
+                            has_intersection.append(query_factor2)
+                while len(has_intersection) > 1:
+                    new_cpt = multiply(has_intersection[-1], has_intersection[-2])
+                    has_intersection = has_intersection[:-2]
+                    CPTs.pop()
+                    CPTs.pop()
+                    # new_cpt = multiply(has_intersection[-1], has_intersection[-2])
+                    # CPTs.remove(get_cpt(has_intersection[-1]))
+                    # CPTs.remove(get_cpt(has_intersection[-2]))
+                    has_intersection.append(new_cpt.factor)
+                    # print('has intersecton')
+                    # print(has_intersection)
+                    CPTs.append(new_cpt)
+                # print('ended')
+                final_cpt = get_cpt(has_intersection[0])
+                # print(final_cpt)
+            # print('heeey')
+            for d in delete:
+                CPTs.remove(d)
+            while len(CPTs) > 1:
+                new_cpt = multiply(CPTs[-1].factor,CPTs[-2].factor)
+                CPTs.pop()
+                CPTs.pop()
+                CPTs.append(new_cpt)
+
+            # print(CPTs[0].table)
+            final_cpt = CPTs[0]
+            for hv in hidden_vars:
+                final_cpt = sumout(final_cpt.factor,hv)
+            return final_cpt
+# joint1 = 'A0 B2 0.2'
+# variable = 'B'
+# rindex = str(joint1).index(variable)
+# joint1 = joint1[:rindex] + joint1[rindex+3:]
+# print(joint1)
+var_count = int(input())
+for i in range(var_count):
+    line = input().split()
+    var_name = line[0]
+    # print(line)
+    states = input().split()
+    var_states = []
+    for j in range(int(line[1])):
+        var_states.append(var_name + str(states[j]))
+    nodes[var_name] = node(var_states)
+factor_count = int(input())
+for i in range(factor_count):
+    factor = input()
+    cpt = CPT(factor)
+    possib_count = 1
+    for node in filter(str.isalpha, factor):
+        possib_count *= len(nodes[node].states)
+    for j in range(possib_count):
+        line = input().split()
+        cpt.init_CP(line[:-1], float(line[-1]))
+
+    CPTs.append(cpt)
+    nodes[factor[0]].set_CPT(cpt)
+    try:
+        factor = factor.split('|')
+        nodes[factor[0]].set_father(factor[1])
+    except:
+        None
+
+query = input().split()
+query_factor = query[0]
+query_nodes = []
+if '|' in query_factor:
+    query_nodes = get_alphabets(query_factor.split('|')[1])
+# cpt = get_cpt(query_factor)
+query_count = int(query[1])
+query = list()
+out = []
+for i in range(query_count):
+    origin_cpt = deepcopy(CPTs)
+    state = input().split()
+    fcpt = infrence(query_factor,make_query(query_nodes,state[-len(query_nodes):]))
+    # print(fcpt)
+    # print(fcpt.table[make_query(get_alphabets(query_factor), state)])
+    # print(query_factor)
+    out.append(fcpt.table[make_query(get_alphabets(query_factor),state)])
+    CPTs = origin_cpt
+for i in out:
+    print(round(i,3))
+
