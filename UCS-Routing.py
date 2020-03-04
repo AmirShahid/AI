@@ -81,8 +81,9 @@ def get_weight(routes, source, dest):
 #             temp.append(i)
 #             queue.put((total_cost, temp))
 
-
+# sample routes
 # routes = {(2, 3): 4, (2, 4): 3, (12, 8): 6, (4, 7): 1, (3, 7): 1, (7, 6): 1 , (2,6) : 1}
+
 routes = {}
 line = input().split()
 n = int(line[0]);m = int(line[1]);k = int(line[2])
@@ -101,27 +102,21 @@ for i in range(m):
         routes[(int(line[0]), int(line[1]))] = int(line[2])
         # routes[(int(line[1]), int(line[0]))] = int(line[2])
 # print(routes)
+
 Msee = []
 line = input().split()
 if k != len(line):
     print(5)
     print(1, 6, 8, 2)
     exit(0)
+
 for i in range(k):
     Msee.append(int(line[i]))
-# print('Msee:',Msee)
-# print('routes:' ,routes)
+
 source = int(input())
 dests = PriorityQueue()
 old_short =[];old_dad=[]
-# for dest in Msee:
 dads, costs = dijsktra(routes, source, Msee[0],old_short,old_dad)
-# print(dads , costs)
-# print(dads,costs)
-# old_short = costs
-# old_dad = dads
-# dests.put((costs[dest], (dest, dads)))
-# print(costs, dads)
 nearest = min(costs[i] for i in range(len(costs)) if i in Msee)
 final = costs.index(nearest)
 
