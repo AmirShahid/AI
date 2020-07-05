@@ -1,3 +1,3 @@
 # AI
 
-## *These are some of my Homeworks for AI course as a begginer in 2017*
+## *These are some of my Homeworks for AI course as a start in first of 2018*
